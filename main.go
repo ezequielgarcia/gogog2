@@ -33,6 +33,7 @@ type Game struct {
 	cellSize  int
 	showGrid  bool
 	showDebug bool
+	cellImage *ebiten.Image
 }
 
 func NewGame() *Game {
@@ -42,9 +43,15 @@ func NewGame() *Game {
 		cellSize: defaultCellSize,
 		showGrid: false,
 	}
+	g.regenerateCellImage()
 	Reset(g)
 
 	return g
+}
+
+func (g *Game) regenerateCellImage() {
+	g.cellImage = ebiten.NewImage(g.cellSize, g.cellSize)
+	g.cellImage.Fill(color.White)
 }
 
 func Reset(g *Game) {
@@ -103,11 +110,13 @@ func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) || inpututil.IsKeyJustPressed(ebiten.KeyKPAdd) {
 		if g.cellSize < maxCellSize {
 			g.cellSize++
+			g.regenerateCellImage()
 		}
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) || inpututil.IsKeyJustPressed(ebiten.KeyKPSubtract) {
 		if g.cellSize > minCellSize {
 			g.cellSize--
+			g.regenerateCellImage()
 		}
 	}
 
@@ -190,15 +199,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	// Draw cells as white rectangles
-	cellColor := color.White
+	// Draw cells using pre-rendered cell image (batch rendering)
+	opts := &ebiten.DrawImageOptions{}
 	for cell := range g.cells {
 		x := cell.X*g.cellSize + g.offsetX
 		y := cell.Y*g.cellSize + g.offsetY
 
 		// Only draw if visible
 		if x >= -g.cellSize && x < screenWidth && y >= -g.cellSize && y < screenHeight {
-			ebitenutil.DrawRect(screen, float64(x), float64(y), float64(g.cellSize-1), float64(g.cellSize-1), cellColor)
+			opts.GeoM.Reset()
+			opts.GeoM.Translate(float64(x), float64(y))
+			screen.DrawImage(g.cellImage, opts)
 		}
 	}
 

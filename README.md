@@ -21,9 +21,20 @@ Despite these simple rules, complex patterns emerge!
 
 ## Controls
 
+### Simulation
 - **Space** - Play/Pause the simulation
-- **Left Click** - Toggle cells on/off
-- **C** - Clear the grid
+- **Left Click** - Toggle cells on/off (draw/erase)
+
+### Grid Management
+- **C** - Clear all cells
+- **F** - Fill all visible cells
+- **R** - Fill 75% of cells randomly
+
+### View
+- **+/=** - Zoom in (increase cell size)
+- **-** - Zoom out (decrease cell size)
+- **G** - Toggle grid lines
+- **D** - Toggle debug stats (FPS, TPS, cell count)
 
 ## Running
 
@@ -36,6 +47,20 @@ Or build from source:
 ```bash
 go build -o gameoflife
 ```
+
+## Testing
+
+Run the comprehensive test suite:
+
+```bash
+go test -v
+```
+
+Tests verify correct Game of Life rules including:
+- Survival with 2-3 neighbors
+- Death by underpopulation/overpopulation
+- Reproduction with exactly 3 neighbors
+- Classic patterns (Blinker, Block, Glider)
 
 ## Ebitengine Interface
 
@@ -71,12 +96,21 @@ func (g *Game) Layout(w, h int) (int, int) {
 
 Go uses **implicit interface satisfaction** - any struct with these three methods automatically implements `ebiten.Game`. No explicit inheritance or declarations needed!
 
+## Features
+
+- **Infinite grid** - Sparse map representation only stores living cells
+- **Configurable zoom** - Adjust cell size from 2px to 50px to fit thousands of cells
+- **Random generation** - Quickly generate interesting patterns
+- **Performance optimized** - Map pre-allocation and efficient rectangle rendering
+- **Debug mode** - Monitor FPS, TPS, and cell count in real-time
+
 ## Implementation Details
 
 - Uses a sparse representation (map) for the infinite grid - only stores living cells
-- Cells are rendered as eggplant emojis (🍆) because why not
-- Grid-based coordinate system with configurable cell size
-- Efficient neighbor counting using a temporary map
+- Cells rendered as white rectangles for maximum performance
+- Grid-based coordinate system with dynamic cell sizing (2-50 pixels)
+- Efficient neighbor counting using pre-allocated maps
+- Optimized drawing with visibility culling
 
 ## License
 
