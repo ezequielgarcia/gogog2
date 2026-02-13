@@ -7,14 +7,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text"
-	"golang.org/x/image/font/basicfont"
 )
 
 const (
-	screenWidth  = 800
-	screenHeight = 600
-	cellSize     = 10
+	screenWidth    = 800
+	screenHeight   = 600
+	minCellSize    = 2
+	maxCellSize    = 50
+	defaultCellSize = 10
 )
 
 type Cell struct {
@@ -28,12 +28,14 @@ type Game struct {
 	tick     int
 	offsetX  int
 	offsetY  int
+	cellSize int
 }
 
 func NewGame() *Game {
 	g := &Game{
 		paused:   true,
 		tickRate: 10,
+		cellSize: defaultCellSize,
 	}
 	Reset(g)
 
@@ -65,11 +67,23 @@ func (g *Game) Update() error {
 		Reset(g)
 	}
 
+	// Zoom in/out with +/- keys
+	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) || inpututil.IsKeyJustPressed(ebiten.KeyKPAdd) {
+		if g.cellSize < maxCellSize {
+			g.cellSize++
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) || inpututil.IsKeyJustPressed(ebiten.KeyKPSubtract) {
+		if g.cellSize > minCellSize {
+			g.cellSize--
+		}
+	}
+
 	// Mouse input to toggle cells
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		mx, my := ebiten.CursorPosition()
-		cellX := (mx - g.offsetX) / cellSize
-		cellY := (my - g.offsetY) / cellSize
+		cellX := (mx - g.offsetX) / g.cellSize
+		cellY := (my - g.offsetY) / g.cellSize
 		cell := Cell{cellX, cellY}
 
 		if g.cells[cell] {
@@ -93,7 +107,8 @@ func (g *Game) Update() error {
 
 func (g *Game) step() {
 	// Count neighbors for all cells and their neighbors
-	neighborCount := make(map[Cell]int)
+	cellCount := len(g.cells)
+	neighborCount := make(map[Cell]int, cellCount*8)
 
 	for cell := range g.cells {
 		for dx := -1; dx <= 1; dx++ {
@@ -108,7 +123,7 @@ func (g *Game) step() {
 	}
 
 	// Apply Game of Life rules
-	newCells := make(map[Cell]bool)
+	newCells := make(map[Cell]bool, cellCount)
 
 	for cell, count := range neighborCount {
 		if count == 3 || (count == 2 && g.cells[cell]) {
@@ -131,14 +146,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 //		ebitenutil.DrawLine(screen, 0, float64(y), screenWidth, float64(y), gridColor)
 //	}
 
-	// Draw cells as eggplant emojis
+	// Draw cells as white rectangles
+	cellColor := color.White
 	for cell := range g.cells {
-		x := cell.X*cellSize + g.offsetX
-		y := cell.Y*cellSize + g.offsetY
+		x := cell.X*g.cellSize + g.offsetX
+		y := cell.Y*g.cellSize + g.offsetY
 
 		// Only draw if visible
-		if x >= -cellSize && x < screenWidth && y >= -cellSize && y < screenHeight {
-			text.Draw(screen, "x", basicfont.Face7x13, x, y+cellSize, color.White)
+		if x >= -g.cellSize && x < screenWidth && y >= -g.cellSize && y < screenHeight {
+			ebitenutil.DrawRect(screen, float64(x), float64(y), float64(g.cellSize-1), float64(g.cellSize-1), cellColor)
 		}
 	}
 
@@ -147,7 +163,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if !g.paused {
 		status = "RUNNING"
 	}
-	ebitenutil.DebugPrint(screen, status+"\nSpace: Play/Pause | C: Clear | R: Reset | Click: Toggle cells")
+	ebitenutil.DebugPrint(screen, status+"\nSpace: Play/Pause | C: Clear | R: Reset | +/-: Zoom | Click: Toggle cells")
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
