@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 	"math/rand"
@@ -23,14 +24,15 @@ type Cell struct {
 }
 
 type Game struct {
-	cells    map[Cell]bool
-	paused   bool
-	tickRate int
-	tick     int
-	offsetX  int
-	offsetY  int
-	cellSize int
-	showGrid bool
+	cells     map[Cell]bool
+	paused    bool
+	tickRate  int
+	tick      int
+	offsetX   int
+	offsetY   int
+	cellSize  int
+	showGrid  bool
+	showDebug bool
 }
 
 func NewGame() *Game {
@@ -112,6 +114,11 @@ func (g *Game) Update() error {
 	// Toggle grid with G
 	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.showGrid = !g.showGrid
+	}
+
+	// Toggle debug stats with D
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		g.showDebug = !g.showDebug
 	}
 
 	// Mouse input to toggle cells
@@ -200,7 +207,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if !g.paused {
 		status = "RUNNING"
 	}
-	ebitenutil.DebugPrint(screen, status+"\nSpace: Play/Pause | C: Clear | F: Fill All | R: Random 75% | +/-: Zoom | G: Grid")
+
+	message := status + "\nSpace: Play/Pause | C: Clear | F: Fill All | R: Random 75% | +/-: Zoom | G: Grid | D: Debug"
+
+	if g.showDebug {
+		fps := ebiten.ActualFPS()
+		tps := ebiten.ActualTPS()
+		cellCount := len(g.cells)
+		message += fmt.Sprintf("\n\nDEBUG STATS:\nFPS: %.2f | TPS: %.2f | Cells: %d | Cell Size: %dpx", fps, tps, cellCount, g.cellSize)
+	}
+
+	ebitenutil.DebugPrint(screen, message)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
