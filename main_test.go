@@ -74,8 +74,8 @@ func TestGameOfLifeRules(t *testing.T) {
 				{2, 0}: true,
 			},
 			expected: map[Cell]bool{
-				{1, 0}: true,
-				{1, 1}: true,
+				{1, 0}:  true,
+				{1, 1}:  true,
 				{1, -1}: true,
 			},
 		},

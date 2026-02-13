@@ -3,6 +3,7 @@ package main
 import (
 	"image/color"
 	"log"
+	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -10,10 +11,10 @@ import (
 )
 
 const (
-	screenWidth    = 800
-	screenHeight   = 600
-	minCellSize    = 2
-	maxCellSize    = 50
+	screenWidth     = 800
+	screenHeight    = 600
+	minCellSize     = 2
+	maxCellSize     = 50
 	defaultCellSize = 10
 )
 
@@ -29,6 +30,7 @@ type Game struct {
 	offsetX  int
 	offsetY  int
 	cellSize int
+	showGrid bool
 }
 
 func NewGame() *Game {
@@ -36,6 +38,7 @@ func NewGame() *Game {
 		paused:   true,
 		tickRate: 10,
 		cellSize: defaultCellSize,
+		showGrid: false,
 	}
 	Reset(g)
 
@@ -51,6 +54,27 @@ func Reset(g *Game) {
 	g.cells[Cell{4, 7}] = true
 }
 
+func FillAll(g *Game) {
+	g.cells = make(map[Cell]bool)
+	for x := 0; x < screenWidth/g.cellSize; x++ {
+		for y := 0; y < screenHeight/g.cellSize; y++ {
+			g.cells[Cell{x, y}] = true
+		}
+	}
+}
+
+func FillRandom(g *Game, howmuch float64) {
+	g.cells = make(map[Cell]bool)
+	totalCells := (screenWidth / g.cellSize) * (screenHeight / g.cellSize)
+	cellsToFill := int(float64(totalCells) * howmuch)
+
+	for i := 0; i < cellsToFill; i++ {
+		x := rand.Intn(screenWidth / g.cellSize)
+		y := rand.Intn(screenHeight / g.cellSize)
+		g.cells[Cell{x, y}] = true
+	}
+}
+
 func (g *Game) Update() error {
 	// Toggle pause with Space
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
@@ -63,8 +87,14 @@ func (g *Game) Update() error {
 		g.paused = true
 	}
 
+	// Fill all visible cells with F
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		FillAll(g)
+	}
+
+	// Fill 75% random cells with R
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		Reset(g)
+		FillRandom(g, 0.75)
 	}
 
 	// Zoom in/out with +/- keys
@@ -77,6 +107,11 @@ func (g *Game) Update() error {
 		if g.cellSize > minCellSize {
 			g.cellSize--
 		}
+	}
+
+	// Toggle grid with G
+	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
+		g.showGrid = !g.showGrid
 	}
 
 	// Mouse input to toggle cells
@@ -137,14 +172,16 @@ func (g *Game) step() {
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{20, 20, 30, 255})
 
-	// Draw grid
-//	gridColor := color.RGBA{40, 40, 50, 255}
-//	for x := 0; x < screenWidth; x += cellSize {
-//		ebitenutil.DrawLine(screen, float64(x), 0, float64(x), screenHeight, gridColor)
-//	}
-//	for y := 0; y < screenHeight; y += cellSize {
-//		ebitenutil.DrawLine(screen, 0, float64(y), screenWidth, float64(y), gridColor)
-//	}
+	// Draw grid if enabled
+	if g.showGrid {
+		gridColor := color.RGBA{40, 40, 50, 255}
+		for x := 0; x < screenWidth; x += g.cellSize {
+			ebitenutil.DrawLine(screen, float64(x), 0, float64(x), screenHeight, gridColor)
+		}
+		for y := 0; y < screenHeight; y += g.cellSize {
+			ebitenutil.DrawLine(screen, 0, float64(y), screenWidth, float64(y), gridColor)
+		}
+	}
 
 	// Draw cells as white rectangles
 	cellColor := color.White
@@ -163,7 +200,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if !g.paused {
 		status = "RUNNING"
 	}
-	ebitenutil.DebugPrint(screen, status+"\nSpace: Play/Pause | C: Clear | R: Reset | +/-: Zoom | Click: Toggle cells")
+	ebitenutil.DebugPrint(screen, status+"\nSpace: Play/Pause | C: Clear | F: Fill All | R: Random 75% | +/-: Zoom | G: Grid")
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
